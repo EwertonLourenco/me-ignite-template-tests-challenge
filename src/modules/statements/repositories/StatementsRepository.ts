@@ -1,10 +1,10 @@
 import { getRepository, Repository } from "typeorm";
 
-import { Statement } from "../entities/Statement";
 import { ICreateStatementDTO } from "../useCases/createStatement/ICreateStatementDTO";
 import { IGetBalanceDTO } from "../useCases/getBalance/IGetBalanceDTO";
 import { IGetStatementOperationDTO } from "../useCases/getStatementOperation/IGetStatementOperationDTO";
 import { IStatementsRepository } from "./IStatementsRepository";
+import { OperationType, Statement } from "../entities/Statement";
 
 export class StatementsRepository implements IStatementsRepository {
   private repository: Repository<Statement>;
@@ -15,10 +15,32 @@ export class StatementsRepository implements IStatementsRepository {
 
   async create({
     user_id,
+    sender_id,
     amount,
     description,
     type
   }: ICreateStatementDTO): Promise<Statement> {
+    if (type === 'transfer') {
+      const senderStatement = this.repository.create({
+        user_id: sender_id,
+        amount,
+        description,
+        type
+      });
+
+      await this.repository.save(senderStatement);
+
+      const receiverStatement = this.repository.create({
+        user_id,
+        sender_id,
+        amount,
+        description,
+        type
+      });
+
+      return this.repository.save(receiverStatement);
+    }
+
     const statement = this.repository.create({
       user_id,
       amount,
